@@ -1,0 +1,127 @@
+-- =====================================================================
+-- SQL SCRIPT FOR GIFT COUPON APPLICATION
+-- This script will:
+-- 1. Create a new database for the application.
+-- 2. Create the necessary tables: Users, Coupons, Transactions, Payments.
+-- 3. Insert initial data into Users and Coupons tables.
+-- 4. Simulate a SUCCESSFUL transaction using COMMIT.
+-- 5. Simulate a FAILED transaction using ROLLBACK.
+-- 6. Show the final state of all tables.
+-- =====================================================================
+
+
+-- =====================================================================
+-- Part 1: DATA DEFINITION LANGUAGE (DDL) - Table Creation
+-- =====================================================================
+
+-- Table for storing user information
+CREATE TABLE Users (
+    UserID INT PRIMARY KEY,
+    UserName VARCHAR(100),
+    Email VARCHAR(100),
+    Phone VARCHAR(15)
+);
+
+-- Table for storing gift coupon details
+CREATE TABLE Coupons (
+    CouponID INT PRIMARY KEY,
+    CouponCode VARCHAR(50),
+    Value DECIMAL(10, 2),
+    ExpiryDate DATE
+);
+
+-- Table for recording each transaction
+CREATE TABLE Transactions (
+    TxnID INT PRIMARY KEY,
+    UserID INT,
+    CouponID INT,
+    Amount DECIMAL(10, 2),
+    TxnDate DATETIME,
+    Status VARCHAR(20),
+    FOREIGN KEY (UserID) REFERENCES Users(UserID),
+    FOREIGN KEY (CouponID) REFERENCES Coupons(CouponID)
+);
+
+-- Table for recording payment details for each transaction
+CREATE TABLE Payments (
+    PaymentID INT PRIMARY KEY,
+    TxnID INT,
+    Method VARCHAR(50),
+    PaymentStatus VARCHAR(50),
+    PaymentDate DATETIME,
+    FOREIGN KEY (TxnID) REFERENCES Transactions(TxnID)
+);
+
+-- =====================================================================
+-- Part 2: DATA MANIPULATION LANGUAGE (DML) - Initial Data Insertion
+-- =====================================================================
+
+-- Insert sample users
+INSERT INTO Users (UserID, UserName, Email, Phone) VALUES
+(1, 'Ravi Kumar', 'ravi@gmail.com', NULL),
+(2, 'Sneha Patel', 'sneha@gmail.com', NULL);
+
+-- Insert sample coupons
+INSERT INTO Coupons (CouponID, CouponCode, Value, ExpiryDate) VALUES
+(101, 'NEW100', 100.00, '2025-12-31'),
+(102, 'SAVE50', 50.00, '2025-11-30');
+
+
+-- =====================================================================
+-- Part 3: TRANSACTION PROCESSING - SUCCESSFUL Case
+-- Description: User 'Ravi' (UserID=1) uses Coupon 'NEW100' (CouponID=101)
+-- for a 500.00 purchase. The payment is successful.
+-- =====================================================================
+
+START TRANSACTION;
+
+-- Record the initial transaction attempt with a 'PENDING' status.
+INSERT INTO Transactions (TxnID, UserID, CouponID, Amount, TxnDate, Status)
+VALUES (1001, 1, 101, 500.00, NOW(), 'PENDING');
+
+-- Record the successful payment information.
+INSERT INTO Payments (PaymentID, TxnID, Method, PaymentStatus, PaymentDate)
+VALUES (501, 1001, 'UPI', 'SUCCESS', NOW());
+
+-- Since the payment was successful, update the transaction status to 'COMPLETED'.
+UPDATE Transactions SET Status = 'COMPLETED' WHERE TxnID = 1001;
+
+-- Commit all changes to the database permanently.
+COMMIT;
+
+
+-- =====================================================================
+-- Part 4: TRANSACTION PROCESSING - ERROR HANDLING / FAILED Case
+-- Description: User 'Sneha' (UserID=2) tries to use Coupon 'SAVE50' (CouponID=102)
+-- for a 300.00 purchase, but the payment fails.
+-- =====================================================================
+
+START TRANSACTION;
+
+-- Record the initial transaction attempt with a 'PENDING' status.
+INSERT INTO Transactions (TxnID, UserID, CouponID, Amount, TxnDate, Status)
+VALUES (1002, 2, 102, 300.00, NOW(), 'PENDING');
+
+-- Record the failed payment information.
+INSERT INTO Payments (PaymentID, TxnID, Method, PaymentStatus, PaymentDate)
+VALUES (502, 1002, 'CARD', 'FAILED', NOW());
+
+-- Because the payment failed, we must undo all changes made during this transaction.
+-- The transaction record for TxnID 1002 will be removed.
+-- The payment record for PaymentID 502 will be removed.
+ROLLBACK;
+
+
+-- =====================================================================
+-- Part 5: VERIFICATION - Show the final state of all tables
+-- =====================================================================
+
+-- You will see Users and Coupons have the initial data.
+-- Transactions table will ONLY have the COMPLETED transaction (TxnID 1001).
+-- Payments table will ONLY have the SUCCESSFUL payment (PaymentID 501).
+-- The failed transaction (TxnID 1002) will not appear in any table due to the ROLLBACK.
+
+SELECT * FROM Users;
+SELECT * FROM Coupons;
+SELECT * FROM Transactions;
+SELECT * FROM Payments;
